@@ -190,65 +190,66 @@ define([], function () {
 
 						var tipId = this.getUID(this.type)
 
-						this.setContent()
-						$tip.attr('id', tipId)
-						this.$element.attr('aria-describedby', tipId)
+						this.setContent().then( function(){
+							$tip.attr('id', tipId)
+							this.$element.attr('aria-describedby', tipId)
 
-						if (this.options.animation) $tip.addClass('fade')
+							if (this.options.animation) $tip.addClass('fade')
 
-						var placement = typeof this.options.placement == 'function' ?
-							this.options.placement.call(this, $tip[0], this.$element[0]) :
-						this.options.placement
+							var placement = typeof this.options.placement == 'function' ?
+								this.options.placement.call(this, $tip[0], this.$element[0]) :
+							this.options.placement
 
-						var autoToken = /\s?auto?\s?/i
-						var autoPlace = autoToken.test(placement)
-						if (autoPlace) placement = placement.replace(autoToken, '') || 'top'
-
-						$tip
-						.detach()
-						.css({ top: 0, left: 0, display: 'block' })
-						.addClass(placement)
-						.data('bs.' + this.type, this)
-
-						this.options.container ? $tip.appendTo(this.options.container) : $tip.insertAfter(this.$element)
-
-						var pos          = this.getPosition()
-						var actualWidth  = $tip[0].offsetWidth
-						var actualHeight = $tip[0].offsetHeight
-
-						if (autoPlace) {
-							var orgPlacement = placement
-							var $container   = this.options.container ? $(this.options.container) : this.$element.parent()
-							var containerDim = this.getPosition($container)
-
-							placement = placement == 'bottom' && pos.bottom + actualHeight > containerDim.bottom ? 'top'    :
-							placement == 'top'    && pos.top    - actualHeight < containerDim.top    ? 'bottom' :
-							placement == 'right'  && pos.right  + actualWidth  > containerDim.width  ? 'left'   :
-							placement == 'left'   && pos.left   - actualWidth  < containerDim.left   ? 'right'  :
-							placement
+							var autoToken = /\s?auto?\s?/i
+							var autoPlace = autoToken.test(placement)
+							if (autoPlace) placement = placement.replace(autoToken, '') || 'top'
 
 							$tip
-							.removeClass(orgPlacement)
+							.detach()
+							.css({ top: 0, left: 0, display: 'block' })
 							.addClass(placement)
-						}
+							.data('bs.' + this.type, this)
 
-						var calculatedOffset = this.getCalculatedOffset(placement, pos, actualWidth, actualHeight)
+							this.options.container ? $tip.appendTo(this.options.container) : $tip.insertAfter(this.$element)
 
-						this.applyPlacement(calculatedOffset, placement)
+							var pos          = this.getPosition()
+							var actualWidth  = $tip[0].offsetWidth
+							var actualHeight = $tip[0].offsetHeight
 
-						var complete = function () {
-							var prevHoverState = that.hoverState
-							that.$element.trigger('shown.bs.' + that.type)
-							that.hoverState = null
+							if (autoPlace) {
+								var orgPlacement = placement
+								var $container   = this.options.container ? $(this.options.container) : this.$element.parent()
+								var containerDim = this.getPosition($container)
 
-							if (prevHoverState == 'out') that.leave(that)
-								}
+								placement = placement == 'bottom' && pos.bottom + actualHeight > containerDim.bottom ? 'top'    :
+								placement == 'top'    && pos.top    - actualHeight < containerDim.top    ? 'bottom' :
+								placement == 'right'  && pos.right  + actualWidth  > containerDim.width  ? 'left'   :
+								placement == 'left'   && pos.left   - actualWidth  < containerDim.left   ? 'right'  :
+								placement
 
-						$.support.transition && this.$tip.hasClass('fade') ?
-							$tip
-						.one('bsTransitionEnd', complete)
-						.emulateTransitionEnd(Tooltip.TRANSITION_DURATION) :
-						complete()
+								$tip
+								.removeClass(orgPlacement)
+								.addClass(placement)
+							}
+
+							var calculatedOffset = this.getCalculatedOffset(placement, pos, actualWidth, actualHeight)
+
+							this.applyPlacement(calculatedOffset, placement)
+
+							var complete = function () {
+								var prevHoverState = that.hoverState
+								that.$element.trigger('shown.bs.' + that.type)
+								that.hoverState = null
+
+								if (prevHoverState == 'out') that.leave(that)
+									}
+
+							$.support.transition && this.$tip.hasClass('fade') ?
+								$tip
+							.one('bsTransitionEnd', complete)
+							.emulateTransitionEnd(Tooltip.TRANSITION_DURATION) :
+							complete()
+						}.bind(this));
 					}
 				}
 
@@ -310,10 +311,10 @@ define([], function () {
 
 				Tooltip.prototype.setContent = function () {
 					var $tip  = this.tip()
-					var title = this.getTitle()
-
-					$tip.find('.tooltip-inner')[this.options.html ? 'html' : 'text'](title)
-					$tip.removeClass('fade in top bottom left right')
+					return this.getTitle().then( function(title) {
+						$tip.find('.tooltip-inner')[this.options.html ? 'html' : 'text'](title)
+						$tip.removeClass('fade in top bottom left right')
+					}.bind(this))
 				}
 
 				Tooltip.prototype.hide = function (callback) {
@@ -354,7 +355,9 @@ define([], function () {
 				}
 
 				Tooltip.prototype.hasContent = function () {
-					return this.getTitle()
+					return true;
+//					Async getTitle would do a useless call to the microflow					
+//					return this.getTitle()
 				}
 
 				Tooltip.prototype.getPosition = function ($element) {
@@ -416,10 +419,14 @@ define([], function () {
 					var $e = this.$element
 					var o  = this.options
 
-					title = $e.attr('data-original-title')
-					|| (typeof o.title == 'function' ? o.title.call($e[0]) :  o.title)
-
-					return title
+					if ( typeof o.title == 'function') {
+						return o.title.call($e[0]);
+					} else {
+						return new Promise( function(resolve,reject) {
+							title = $e.attr('data-original-title') || o.title;		
+							resolve( title );
+						}.bind(this));
+					}
 				}
 
 				Tooltip.prototype.getUID = function (prefix) {

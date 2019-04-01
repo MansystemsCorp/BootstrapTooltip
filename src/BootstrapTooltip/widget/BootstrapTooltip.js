@@ -21,6 +21,7 @@ define([
         tooltipSource: "",
         tooltipMessageAttribute: "",
         tooltipMessageMicroflow: "",
+        tooltipMessageMicroflowLazy: false,
         tooltipMessageString: "",
         tooltipLocation: "top",
         tooltipMode: "hover",
@@ -42,12 +43,18 @@ define([
 
         update: function (obj, callback) {
             logger.debug(this.id + ".update");
+            this._contextObj = obj;
 
             if (this.tooltipMessageMicroflow !== "") {
-                this._execMf(this.tooltipMessageMicroflow, obj ? obj.getGuid() : null, lang.hitch(this, function (string) {
-                    this._tooltipText = string;
+                if ( ! this.tooltipMessageMicroflowLazy ) {
+                    this._execMf(this.tooltipMessageMicroflow, obj ? obj.getGuid() : null, lang.hitch(this, function (string) {
+                        this._tooltipText = string;
+                        this._initializeTooltip(callback);
+                    }));
+                } else {
+                    this._tooltipText = '...';
                     this._initializeTooltip(callback);
-                }));
+                }
             } else {
                 if (this.tooltipMessageString !== "") {
                     this._tooltipText = this.tooltipMessageString;
@@ -76,12 +83,31 @@ define([
                 $targetElement = $targetElement.find(".form-control").length !== 0 ? $targetElement.find(".form-control") : $targetElement.find("input");
             }
 
-            $targetElement.tooltip({
+            var tooltipOptions = {
                 title: this._tooltipText,
                 placement: this.tooltipLocation,
                 trigger: this._tooltipTrigger,
                 html : this.tooltipRenderHTML
-            });
+            }
+
+            if ( this.tooltipMessageMicroflowLazy ) {
+                tooltipOptions.title = lang.hitch(this, function() {                    
+                    if ( this._tooltipText == '...' ) {
+                        return new Promise( function(resolve,reject) {
+                            this._execMf(this.tooltipMessageMicroflow, this._contextObj ? this._contextObj.getGuid() : null, lang.hitch(this, function (string) {
+                                this._tooltipText = string;
+                                resolve( this._tooltipText );
+                            }));
+                        }.bind(this));
+                    } else {
+                        return new Promise( function(resolve,reject) {
+                            resolve( this._tooltipText );
+                        }.bind(this) );
+                    }
+                });
+            }
+
+            $targetElement.tooltip( tooltipOptions );
 
             this._executeCallback(cb, "_initializeTooltip");
         },

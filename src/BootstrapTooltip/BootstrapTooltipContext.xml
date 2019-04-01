@@ -61,6 +61,12 @@
             <returnType type="String" />
         </property>
 		
+        <property key="tooltipMessageMicroflowLazy" type="boolean" required="true" defaultValue="false">
+            <caption>Lazy load microflow</caption>
+            <category>Data source</category>
+            <description>Only call data source microflow when shown</description>
+        </property>
+		
 		<property key="tooltipMessageAttribute" type="attribute" allowNonPersistableEntities="true" isPath="optional" pathType="reference" required="false">
 			<caption>Tooltip source attribute</caption>
 			<category>Data source</category>

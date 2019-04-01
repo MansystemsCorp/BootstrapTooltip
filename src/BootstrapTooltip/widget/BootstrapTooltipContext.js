@@ -9,14 +9,20 @@ define([
 
         update: function (obj, callback) {
             logger.debug(this.id + ".update");
+            this._contextObj = obj;
 
             var guid = obj ? obj.getGuid() : null;
             if (this.tooltipSource === "microflow") {
                 if (this.tooltipMessageMicroflow !== "") {
-                    this._execMf(this.tooltipMessageMicroflow, guid, lang.hitch(this, function (string) {
-                        this._tooltipText = string;
-                        this._initializeTooltip();
-                    }));
+                    if (!this.tooltipMessageMicroflowLazy) {
+                        this._execMf(this.tooltipMessageMicroflow, obj ? obj.getGuid() : null, lang.hitch(this, function (string) {
+                            this._tooltipText = string;
+                            this._initializeTooltip(callback);
+                        }));
+                    } else {
+                        this._tooltipText = '...';
+                        this._initializeTooltip(callback);
+                    }
                 } else {
                     if (this.tooltipMessageString !== "") {
                         this._tooltipText = this.tooltipMessageString;
